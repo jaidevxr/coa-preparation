@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>COA Preparation Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #4f46e5;
+      border-radius: 4px;
+    }
+    html {
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .blob {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 650px;
+      height: 650px;
+      border-radius: 100%;
+      background-image: linear-gradient(#1100ff 10%, #ff00f2);
+      filter: blur(250px);
+      transition: all 450ms ease-out;
+      position: fixed;
+      pointer-events: none;
+      left: 0;
+      top: 0;
+      transform: translate(calc(-50% + 15px), -50%);
+      z-index: -1;
+    }
+    #modalEditModule, #modalAddModule, #modalNotes {
+      background: rgba(0,0,0,0.8);
+    }
+
+    /* New style for checked topics: strikethrough */
+    .topic-label.completed {
+      text-decoration: line-through;
+      color: #a1a1aa; /* lighter gray for completed */
+    }
+    @media (max-width: 480px) {
+  .blob {
+    width: 200px;
+    height: 200px;
+    filter: blur(90px);
+  }
+
+  header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  header h1 {
+    font-size: 0.875rem;
+    flex: 1 0 100%;
+  }
+
+  header .flex {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.25rem;
+  }
+
+  header button {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.4rem;
+  }
+
+  header label {
+    transform: scale(0.8);
+  }
+
+  .modal {
+    width: 90%;
+    padding: 1rem;
+  }
+}
+
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+  <div class="blob"></div>
+
+  <header class="flex header items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-900 z-50 relative">
+
+    <h1 class="text-2xl font-semibold tracking-wide select-none">SE PREPARATION</h1>
+    <div class="flex items-center space-x-4">
+      <button id="btnAddModule" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-md transition text-white">Add Topics</button>
+      <button id="btnNotes" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-md transition">Notes</button>
+      <button id="btnPyq" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-md transition">PYQ</button>
+    </div>
+  </header>
+
+  <div class="max-w-4xl mx-auto mt-6 px-6 w-full">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-lg font-semibold">Progress</span>
+      <span id="progressPercent" class="font-semibold text-indigo-400">0%</span>
+    </div>
+    <div class="w-full bg-gray-700 rounded-full h-5 overflow-hidden shadow-inner">
+      <div id="progressBar" class="bg-indigo-600 h-5 w-0 transition-all duration-300"></div>
+    </div>
+
+    <!-- Remaining time display -->
+    <div class="mt-3 text-center text-sm text-indigo-400 font-medium" id="remainingTime">
+      Remaining time: calculating...
+    </div>
+  </div>
+
+  <main class="max-w-4xl mx-auto mt-8 px-6 pb-20 w-full space-y-8"></main>
+
+  <!-- Edit Module Modal -->
+  <div id="modalEditModule" class="fixed inset-0 hidden justify-center items-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 shadow-lg relative">
+      <h3 class="text-xl font-semibold mb-4 text-indigo-400">Edit Module</h3>
+      <label class="block mb-2 font-medium">Module Name</label>
+      <input id="editModuleName" type="text" class="w-full rounded px-3 py-2 mb-4 text-gray-900" />
+      <label class="block mb-2 font-medium">Topics (comma separated)</label>
+      <textarea id="editModuleTopics" rows="5" class="w-full rounded px-3 py-2 mb-4 text-gray-900"></textarea>
+      <div class="flex justify-between items-center">
+        <button id="deleteModuleBtn" class="bg-red-600 hover:bg-red-700 text-white rounded px-4 py-2">Delete Module</button>
+        <div>
+          <button id="cancelEditBtn" class="mr-3 px-4 py-2 rounded bg-gray-600 hover:bg-gray-700">Cancel</button>
+          <button id="saveEditBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-2">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Module Modal -->
+  <div id="modalAddModule" class="fixed inset-0 hidden justify-center items-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 shadow-lg relative">
+      <h3 class="text-xl font-semibold mb-4 text-green-400">Add New Module/ Imp Topics</h3>
+      <label class="block mb-2 font-medium">Module Name</label>
+      <input id="addModuleName" type="text" class="w-full rounded px-3 py-2 mb-4 text-gray-900" />
+      <label class="block mb-2 font-medium">Topics (comma separated)</label>
+      <textarea id="addModuleTopics" rows="5" class="w-full rounded px-3 py-2 mb-4 text-gray-900"></textarea>
+      <div class="flex justify-end items-center">
+        <button id="cancelAddBtn" class="mr-3 px-4 py-2 rounded bg-gray-600 hover:bg-gray-700">Cancel</button>
+        <button id="saveAddBtn" class="bg-green-600 hover:bg-green-700 text-white rounded px-4 py-2">Add Topics</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Modal -->
+  <div id="modalNotes" class="fixed inset-0 bg-black bg-opacity-90 hidden flex flex-col z-50">
+    <header class="flex header items-center justify-between px-6 py-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-50">
+
+      <h2 class="text-xl font-semibold text-white">Notes</h2>
+      <button id="closeNotes" class="text-gray-300 hover:text-white text-3xl font-bold leading-none">&times;</button>
+    </header>
+    <embed id="pdfEmbed" src="coa.pdf" type="application/pdf" class="flex-grow w-full" style="height: calc(100vh - 64px);" />
+  </div>
+  <!-- PYQ Modal -->
+<div id="modalPyq" class="fixed inset-0 bg-black bg-opacity-90 hidden flex flex-col z-50">
+  <header class="flex header items-center justify-between px-6 py-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-50">
+    <h2 class="text-xl font-semibold text-white">Previous Year Questions</h2>
+    <button id="closePyq" class="text-gray-300 hover:text-white text-3xl font-bold leading-none">&times;</button>
+  </header>
+  <embed id="pyqEmbed" src="coapyq.pdf" type="application/pdf" class="flex-grow w-full" style="height: calc(100vh - 64px);" />
+</div>
+
+
+<script>
+  // Initial modules data (try to load from localStorage first)
+  let modules = JSON.parse(localStorage.getItem("coaModules")) || [
+    {
+  name: "Computer Evolution & Arithmetic",
+  topics: [
+    "A Brief History of Computers: Von Neumann Architecture",
+    "Hardware Architecture", 
+    "Computer Components",
+    "Interconnection Structures", 
+    "Bus Interconnection", 
+    "Register Transfer Language", 
+    "Bus and Memory Transfers", 
+    "Bus Architecture", 
+    "Bus Arbitration Techniques", 
+    "Arithmetic Logic", 
+    "Shift Microoperation", 
+    "Arithmetic Logic Shift Unit", 
+    "Arithmetic Algorithms (Addition, Subtraction, Booth Multiplication, Division)"
+  ],
+},
+{
+  name: "Control Unit",
+  topics: [
+    "Control Design: Hardwired & Micro Programmed", 
+    "Performing of Arithmetic or Logical Operations", 
+    "Multiple Bus Organization", 
+    "Hardwired Control", 
+    "Microprogrammed Control", 
+    "Microinstruction", 
+    "Microprogram Sequencing", 
+    "Wide-Branch Addressing", 
+    "Microinstruction with Next-address Field", 
+    "Prefetching", 
+    "Pipeline Control: Instruction Pipelines", 
+    "Pipeline Performance"
+  ],
+},
+{
+  name: "Processor Organization and Input-Output Organization",
+  topics: [
+    "Processor Design: General Register Organization", 
+    "Stack Organization", 
+    "Addressing Mode", 
+    "Instruction Format", 
+    "Data Transfer & Manipulations", 
+    "Program Control", 
+    "Reduced Instruction Set",
+    "Computer Memory Organization: Basic Concept and Hierarchy",
+    "Semiconductor RAM Memories", 
+    "2D & 2½D Memory Organization", 
+    "ROM Memories", 
+    "Cache Memories: Concept and Design Issues & Performance",
+    "Address Mapping and Replacement", 
+    "Auxiliary Memories: Magnetic Disk, Magnetic Tape and Optical Disks", 
+    "Virtual Memory: Concept and Implementation"
+  ],
+},
+{
+  name: "Interrupts",
+  topics: [
+    "Interrupt Hardware", 
+    "Types of Interrupts and Exceptions", 
+    "Modes of Data Transfer: Programmed I/O, Interrupt Initiated I/O, Direct Memory Access", 
+    "I/O Channels and Processors", 
+    "Serial Communication: Synchronous and Asynchronous Communication", 
+    "Standard Communication Interfaces"
+  ],
+}
+,
+  ];
+
+  // Save modules to localStorage helper
+  function saveModules() {
+    localStorage.setItem("coaModules", JSON.stringify(modules));
+  }
+
+  // Calculate overall progress %
+  function updateProgress() {
+  let totalTopics = 0;
+  let completedTopics = 0;
+  modules.forEach(m => {
+    totalTopics += m.topics.length;
+    if(m.progress) {
+      completedTopics += Object.values(m.progress).filter(v => v === true).length;
+    }
+  });
+  const percent = totalTopics ? (completedTopics / totalTopics) * 100 : 0;
+  document.getElementById("progressPercent").textContent = `${percent.toFixed(2)}%`;
+  document.getElementById("progressBar").style.width = percent + "%";
+}
+
+
+  // Render modules & topics
+  function render() {
+    const main = document.querySelector("main");
+    main.innerHTML = "";
+
+    modules.forEach((module, mIndex) => {
+      const section = document.createElement("section");
+      section.className = "bg-gray-800 rounded-md p-4 shadow-md";
+
+      // Module header
+      const header = document.createElement("header");
+      header.className = "flex items-center justify-between mb-3";
+
+      const title = document.createElement("h2");
+      title.textContent = module.name;
+      title.className = "font-semibold text-lg text-indigo-400";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.className = "text-indigo-400 hover:text-indigo-600";
+      editBtn.addEventListener("click", () => openEditModal(mIndex));
+
+      header.appendChild(title);
+      header.appendChild(editBtn);
+      section.appendChild(header);
+
+      // Topics list
+      const ul = document.createElement("ul");
+      ul.className = "space-y-2";
+
+
+      module.topics.forEach((topic, tIndex) => {
+        const li = document.createElement("li");
+
+        const id = `module${mIndex}_topic${tIndex}`;
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = id;
+        checkbox.checked = module.progress && module.progress[tIndex] === true;
+
+        const label = document.createElement("label");
+        label.htmlFor = id;
+        label.className = "ml-2 cursor-pointer topic-label";
+        label.textContent = topic;
+        if (checkbox.checked) {
+          label.classList.add("completed");  // Add strikethrough if completed
+        }
+
+        checkbox.addEventListener("change", () => {
+          if (!module.progress) module.progress = {};
+          module.progress[tIndex] = checkbox.checked;
+          if(checkbox.checked) {
+            label.classList.add("completed");
+          } else {
+            label.classList.remove("completed");
+          }
+          saveModules();
+          updateProgress();
+        });
+
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        ul.appendChild(li);
+      });
+
+      section.appendChild(ul);
+      main.appendChild(section);
+    });
+
+    updateProgress();
+    updateRemainingTime();
+  }
+
+  // Remaining time calculation
+  function updateRemainingTime() {
+    const deadline = new Date("2025-06-10T13:59:59");
+    const now = new Date();
+    let diff = deadline - now;
+
+    if (diff <= 0) {
+      document.getElementById("remainingTime").textContent = "Deadline reached!";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    diff -= days * (1000 * 60 * 60 * 24);
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    diff -= hours * (1000 * 60 * 60);
+
+    const minutes = Math.floor(diff / (1000 * 60));
+    diff -= minutes * (1000 * 60);
+
+    const seconds = Math.floor(diff / 1000);
+
+    document.getElementById("remainingTime").textContent = 
+      `Remaining time: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }
+
+  // Modal Elements
+  const modalEdit = document.getElementById("modalEditModule");
+  const modalAdd = document.getElementById("modalAddModule");
+  const modalNotes = document.getElementById("modalNotes");
+
+  // Edit Modal Inputs and Buttons
+  const editModuleName = document.getElementById("editModuleName");
+  const editModuleTopics = document.getElementById("editModuleTopics");
+  const saveEditBtn = document.getElementById("saveEditBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
+  const deleteModuleBtn = document.getElementById("deleteModuleBtn");
+
+  // Add Modal Inputs and Buttons
+  const addModuleName = document.getElementById("addModuleName");
+  const addModuleTopics = document.getElementById("addModuleTopics");
+  const saveAddBtn = document.getElementById("saveAddBtn");
+  const cancelAddBtn = document.getElementById("cancelAddBtn");
+
+  let currentEditIndex = null;
+
+  // Open edit modal for module
+  function openEditModal(index) {
+    currentEditIndex = index;
+    const module = modules[index];
+    editModuleName.value = module.name;
+    editModuleTopics.value = module.topics.join(", ");
+    modalEdit.classList.remove("hidden");
+  }
+  saveEditBtn.addEventListener("click", () => {
+  const name = editModuleName.value.trim();
+  const topicsRaw = editModuleTopics.value.trim();
+  if (!name || !topicsRaw) {
+    alert("Module name and topics cannot be empty!");
+    return;
+  }
+
+  const newTopics = topicsRaw.split(",").map(t => t.trim()).filter(t => t);
+
+  const oldModule = modules[currentEditIndex];
+  const newProgress = {};
+
+  // Preserve progress for topics with the same text
+  if (oldModule.progress) {
+    newTopics.forEach((topic, newIndex) => {
+      const oldIndex = oldModule.topics.findIndex(t => t === topic);
+      if (oldIndex !== -1 && oldModule.progress[oldIndex]) {
+        newProgress[newIndex] = true;
+      }
+    });
+  }
+
+  modules[currentEditIndex] = {
+    name,
+    topics: newTopics,
+    progress: newProgress
+  };
+
+  saveModules();
+  render();
+  closeEditModal();
+});
+
+
+
+  // Save edit changes
+  saveAddBtn.addEventListener("click", () => {
+  const name = addModuleName.value.trim();
+  const topicsRaw = addModuleTopics.value.trim();
+  if (!name || !topicsRaw) {
+    alert("Module name and topics cannot be empty!");
+    return;
+  }
+  const topics = topicsRaw.split(",").map(t => t.trim()).filter(t => t);
+  modules.push({ name, topics });
+  saveModules();
+  render();
+  modalAdd.classList.add("hidden"); // ✅ close modal after add
+});
+
+
+
+  cancelEditBtn.addEventListener("click", closeEditModal);
+
+  function closeEditModal() {
+    modalEdit.classList.add("hidden");
+    currentEditIndex = null;
+  }
+
+  // Delete module
+  deleteModuleBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to delete this module?")) {
+      modules.splice(currentEditIndex, 1);
+      saveModules();
+      render();
+      closeEditModal();
+    }
+  });
+
+  // Add module modal handlers
+  document.getElementById("btnAddModule").addEventListener("click", () => {
+    addModuleName.value = "";
+    addModuleTopics.value = "";
+    modalAdd.classList.remove("hidden");
+  });
+
+  cancelAddBtn.addEventListener("click", () => {
+    modalAdd.classList.add("hidden");
+  });
+
+  
+
+
+  const cursor = document.querySelector('.blob');
+    document.addEventListener('mousemove', function(e){
+      cursor.style.transform = `translate3d(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%), 0)`;
+    });
+
+  // Notes modal open/close
+  document.getElementById("btnNotes").addEventListener("click", () => {
+    modalNotes.classList.remove("hidden");
+  });
+  document.getElementById("closeNotes").addEventListener("click", () => {
+    modalNotes.classList.add("hidden");
+  });
+  // PYQ modal open/close
+const modalPyq = document.getElementById("modalPyq");
+
+document.getElementById("btnPyq").addEventListener("click", () => {
+  modalPyq.classList.remove("hidden");
+});
+document.getElementById("closePyq").addEventListener("click", () => {
+  modalPyq.classList.add("hidden");
+});
+
+
+  // Update time every second
+  setInterval(() => {
+    updateRemainingTime();
+  }, 1000);
+
+  // Initial render
+  render();
+  
+</script>
+  <footer class="mt-auto py-4 border-t border-gray-700 text-center text-sm text-gray-400">
+  Made by <span class="text-indigo-400 font-medium">Jaidev</span>
+</footer>
+</body>
+</html>
